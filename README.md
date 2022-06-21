@@ -2,7 +2,7 @@
 This is a little simply expandable lexer written fully in Java.<br>
 Heavily inspired by [Noq](https://github.com/tsoding/Noq) lexer.
 
-## Docs (kind if)
+## Docs (kind of)
 ### Lexer interface
 | Method                                     | Description                                                                                                                                                                   |
 |--------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -26,6 +26,7 @@ Heavily inspired by [Noq](https://github.com/tsoding/Noq) lexer.
 | Token.Identifier | Holds the String which contains the name of the identifier. |
 | Token.Keyword    | Holds the enum which contains the keyword type.             |
 | Token.Special    | Holds the enum which contains the special character type.   |
+
 P.S. Maybe it makes sense to unite `Token.Keyword` and `Token.Special` in the context of this particular lexer, as they are practically identical.
 
 ### Token.Location interface
