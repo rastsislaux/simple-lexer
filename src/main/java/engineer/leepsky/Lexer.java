@@ -74,6 +74,13 @@ public class Lexer {
     private static final char NINE          = '9';
     private static final char SQUARE_OPEN   = '[';
     private static final char SQUARE_CLOSE  = ']';
+    private static final char BACKSLASH     = '\\';
+    private static final char CHAR_R        = 'r';
+    private static final char CHAR_N        = 'n';
+    private static final char CHAR_T        = 't';
+    private static final char CHAR_B        = 'b';
+    private static final char CHAR_F        = 'f';
+    private static final char QUOTE         = '\'';
 
     static class Unreachable extends RuntimeException {
         public Unreachable(String msg) { super(msg); }
@@ -127,8 +134,26 @@ public class Lexer {
                 return new Token.Unparsed(Token.Unparsed.Fail.UNCLOSED_STRING_LITERAL,
                         new Token.Location(st.file(), st.col(), st.row()));
             }
-            content.append(source.charAt(st.curIndex()));
-            st.incIndex(1); st.incCol(1);
+            if (st.curChar(source) != BACKSLASH) {
+                content.append(source.charAt(st.curIndex()));
+                st.incIndex(1);
+                st.incCol(1);
+            } else if (st.curIndex() != st.length() - 1) {
+                st.incIndex(1); st.incCol(1);
+                switch (st.curChar(source)) {
+                    case CHAR_R     -> content.append('\r');
+                    case CHAR_B     -> content.append('\b');
+                    case CHAR_F     -> content.append('\f');
+                    case CHAR_N     -> content.append('\n');
+                    case CHAR_T     -> content.append('\t');
+                    case QUOTE      -> content.append('\'');
+                    case DBL_QUOTE  -> content.append('"');
+                    default         -> { return new Token.Unparsed(Token.Unparsed.Fail.INVALID_STRING_ESCAPE,
+                            new Token.Location(st.file(), st.col(), st.row())); }
+                }
+                st.incIndex(1); st.incCol(1);
+            } else return new Token.Unparsed(Token.Unparsed.Fail.INVALID_STRING_ESCAPE,
+                    new Token.Location(st.file(), st.col(), st.row()));
         }
         return makeString(content.toString(), st);
     }

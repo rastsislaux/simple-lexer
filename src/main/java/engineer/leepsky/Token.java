@@ -333,7 +333,8 @@ public abstract class Token {
         enum Fail {
             UNCLOSED_STRING_LITERAL,
             UNKNOWN_SEQUENCE_OF_CHARACTERS,
-            INVALID_FLOAT
+            INVALID_FLOAT,
+            INVALID_STRING_ESCAPE
         }
 
         private Fail fail;
