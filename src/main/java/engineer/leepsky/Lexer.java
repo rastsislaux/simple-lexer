@@ -81,6 +81,7 @@ public class Lexer {
     private static final char CHAR_B        = 'b';
     private static final char CHAR_F        = 'f';
     private static final char QUOTE         = '\'';
+    private static final char LESSER        = '<';
 
     static class Unreachable extends RuntimeException {
         public Unreachable(String msg) { super(msg); }
@@ -104,6 +105,8 @@ public class Lexer {
             case HASHTAG        -> { return makeSpecial(Token.Special.Kind.HASHTAG,      st); }
             case SQUARE_OPEN    -> { return makeSpecial(Token.Special.Kind.SQUARE_OPEN,  st); }
             case SQUARE_CLOSE   -> { return makeSpecial(Token.Special.Kind.SQUARE_CLOSE, st); }
+            case LESSER         -> { return makeSpecial(Token.Special.Kind.LESSER,       st); }
+            case BIGGER         -> { return makeSpecial(Token.Special.Kind.BIGGER,       st); }
             case SPACE          -> { return null; }
         }
         throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:83 is not exhaustive.");
@@ -228,7 +231,7 @@ public class Lexer {
         switch (source.charAt(st.curIndex())) {
 
             case SLASH, CURLY_OPEN, CURLY_CLOSE, PAREN_OPEN, PAREN_CLOSE, ASTERISK, PLUS, PERCENT, BANG, BAR, COMMA,
-                    SEMICOLON, DOT, HASHTAG, SQUARE_OPEN, SQUARE_CLOSE, SPACE -> {
+                    SEMICOLON, DOT, HASHTAG, SQUARE_OPEN, SQUARE_CLOSE, SPACE, LESSER, BIGGER -> {
                 return parseOneCharToken(source, st);
             }
 

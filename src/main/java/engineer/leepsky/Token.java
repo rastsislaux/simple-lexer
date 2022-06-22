@@ -151,7 +151,9 @@ public abstract class Token {
             COLON,
             DBL_COLON,
             SEMICOLON,
-            DOT
+            DOT,
+            LESSER,
+            BIGGER
         }
 
         private Kind specialKind;
