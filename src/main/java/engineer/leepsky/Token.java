@@ -18,6 +18,8 @@ public abstract class Token {
 
     Token(Location loc) { this.loc = loc; }
 
+    // kinds of tokens
+
     public static class Identifier extends Token {
 
         protected String name;
@@ -130,6 +132,8 @@ public abstract class Token {
             CURLY_CLOSE,
             PAREN_OPEN,
             PAREN_CLOSE,
+            SQUARE_OPEN,
+            SQUARE_CLOSE,
 
             // Other special symbols
             COMMA,

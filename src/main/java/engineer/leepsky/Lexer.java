@@ -72,14 +72,15 @@ public class Lexer {
     private static final char SEVEN         = '7';
     private static final char EIGHT         = '8';
     private static final char NINE          = '9';
+    private static final char SQUARE_OPEN   = '[';
+    private static final char SQUARE_CLOSE  = ']';
 
-    private static Token parseChar(String source, ParsingState st) {
+    static class Unreachable extends RuntimeException {
+        public Unreachable(String msg) { super(msg); }
+    }
 
-        if (source.charAt(st.curIndex) == '\n') { st.col = 1; st.incRow(1); return null; }
-        else st.incCol(1);
-
-        switch (source.charAt(st.curIndex())) {
-
+    private static Token parseOneCharToken(String source, ParsingState st) throws Unreachable {
+        switch (st.curChar(source)) {
             case SLASH          -> { return makeSpecial(Token.Special.Kind.SLASH,        st); }
             case CURLY_OPEN     -> { return makeSpecial(Token.Special.Kind.CURLY_OPEN,   st); }
             case CURLY_CLOSE    -> { return makeSpecial(Token.Special.Kind.CURLY_CLOSE,  st); }
@@ -94,39 +95,57 @@ public class Lexer {
             case SEMICOLON      -> { return makeSpecial(Token.Special.Kind.SEMICOLON,    st); }
             case DOT            -> { return makeSpecial(Token.Special.Kind.DOT,          st); }
             case HASHTAG        -> { return makeSpecial(Token.Special.Kind.HASHTAG,      st); }
+            case SQUARE_OPEN    -> { return makeSpecial(Token.Special.Kind.SQUARE_OPEN,  st); }
+            case SQUARE_CLOSE   -> { return makeSpecial(Token.Special.Kind.SQUARE_CLOSE, st); }
             case SPACE          -> { return null; }
+        }
+        throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:83 is not exhaustive.");
+    }
 
-            case ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE -> {
-                StringBuilder number = new StringBuilder();
-                boolean hasDot = false;
-                while (st.curIndex() != source.length() &&
-                        (Character.isDigit(st.curChar(source)) || st.curChar(source) == DOT)) {
-                    if (st.curChar(source) == DOT && hasDot)
-                        return new Token.Unparsed(Token.Unparsed.Fail.INVALID_FLOAT, new Token.Location(st.file(), st.col(), st.row()));
-                    if (st.curChar(source) == DOT)
-                        hasDot = true;
-                    number.append(st.curChar(source));
-                    st.incIndex(1); st.incCol(1);
-                }
-                st.incCol(-1); st.incIndex(-1);
-                if (hasDot) return makeFloat(number.toString(), st);
-                return makeInt(number.toString(), st);
+    private static Token parseNumericToken(String source, ParsingState st) {
+        StringBuilder number = new StringBuilder();
+        boolean hasDot = false;
+        while (st.curIndex() != source.length() &&
+                (Character.isDigit(st.curChar(source)) || st.curChar(source) == DOT)) {
+            if (st.curChar(source) == DOT && hasDot)
+                return new Token.Unparsed(Token.Unparsed.Fail.INVALID_FLOAT, new Token.Location(st.file(), st.col(), st.row()));
+            if (st.curChar(source) == DOT)
+                hasDot = true;
+            number.append(st.curChar(source));
+            st.incIndex(1); st.incCol(1);
+        }
+        st.incCol(-1); st.incIndex(-1);
+        if (hasDot) return makeFloat(number.toString(), st);
+        return makeInt(number.toString(), st);
+    }
+
+    private static Token parseStringLiteral(String source, ParsingState st) {
+        StringBuilder content = new StringBuilder();
+        st.incIndex(1); st.incCol(1);
+        while (source.charAt(st.curIndex()) != DBL_QUOTE) {
+            if (source.charAt(st.curIndex()) == '\n' || st.curIndex() == source.length() - 1) {
+                return new Token.Unparsed(Token.Unparsed.Fail.UNCLOSED_STRING_LITERAL,
+                        new Token.Location(st.file(), st.col(), st.row()));
             }
+            content.append(source.charAt(st.curIndex()));
+            st.incIndex(1); st.incCol(1);
+        }
+        return makeString(content.toString(), st);
+    }
 
-            case DBL_QUOTE -> {
-                StringBuilder content = new StringBuilder();
-                st.incIndex(1); st.incCol(1);
-                while (source.charAt(st.curIndex()) != DBL_QUOTE) {
-                    if (source.charAt(st.curIndex()) == '\n' || st.curIndex() == source.length() - 1) {
-                        return new Token.Unparsed(Token.Unparsed.Fail.UNCLOSED_STRING_LITERAL,
-                                new Token.Location(st.file(), st.col(), st.row()));
-                    }
-                    content.append(source.charAt(st.curIndex()));
-                    st.incIndex(1); st.incCol(1);
-                }
-                return makeString(content.toString(), st);
-            }
+    private static String getIdentOrKeywordName(String source, ParsingState st) {
+        StringBuilder name = new StringBuilder();
+        while (st.curIndex() != source.length() &&
+                (Character.isLetterOrDigit(source.charAt(st.curIndex())) || source.charAt(st.curIndex()) == '_')) {
+            name.append(source.charAt(st.curIndex()));
+            st.incIndex(1); st.incCol(1);
+        }
+        st.incIndex(-1); st.incCol(-1);
+        return name.toString();
+    }
 
+    private static Token parseOtherTokens(String source, ParsingState st) {
+        switch (st.curChar(source)) {
             case COLON -> {
                 if (st.curIndex() != source.length() - 1 && source.charAt(st.curIndex() + 1) == COLON) {
                     st.incIndex(1); st.incCol(1);
@@ -153,34 +172,57 @@ public class Lexer {
                 else
                     return makeSpecial(Token.Special.Kind.DASH, st);
             }
+        }
+        throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:176 is not exhaustive.");
+    }
+
+    private static Token tryParseIdentOrKeyword(String name, ParsingState st) {
+        // If the name is empty (it is not alphanumeric string slice), then it is an unknown character or
+        // sequence of characters
+        if (name.isEmpty()) {
+            return new Token.Unparsed(Token.Unparsed.Fail.UNKNOWN_SEQUENCE_OF_CHARACTERS,
+                    new Token.Location(st.file(), st.col(), st.row()));
+        }
+        // Trying to get a keyword with that name
+        else if (Token.Keyword.getKeywordKindByName(name) != Token.Keyword.Kind.NONE) {
+            return makeKeyword(
+                    Token.Keyword.getKeywordKindByName(name),
+                    st);
+        }
+        // If none of the above fits, it is an identifier
+        else {
+            return makeIdent(name, st);
+        }
+    }
+
+    private static Token parseChar(String source, ParsingState st) {
+
+        if (source.charAt(st.curIndex) == '\n') { st.col = 0; st.incRow(1); return null; }
+        else st.incCol(1);
+
+        switch (source.charAt(st.curIndex())) {
+
+            case SLASH, CURLY_OPEN, CURLY_CLOSE, PAREN_OPEN, PAREN_CLOSE, ASTERISK, PLUS, PERCENT, BANG, BAR, COMMA,
+                    SEMICOLON, DOT, HASHTAG, SQUARE_OPEN, SQUARE_CLOSE, SPACE -> {
+                return parseOneCharToken(source, st);
+            }
+
+            case ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE -> {
+                return parseNumericToken(source, st);
+            }
+
+            case DBL_QUOTE -> {
+                return parseStringLiteral(source, st);
+            }
+
+            case COLON, EQUALS, DASH -> {
+                return parseOtherTokens(source, st);
+            }
 
             default -> {
-
                 // If none of the above fits, then try to parse as identifier or keyword
-                StringBuilder name = new StringBuilder();
-                while (st.curIndex() != source.length() &&
-                        (Character.isLetterOrDigit(source.charAt(st.curIndex())) || source.charAt(st.curIndex()) == '_')) {
-                    name.append(source.charAt(st.curIndex()));
-                    st.incIndex(1); st.incCol(1);
-                }
-                st.incIndex(-1); st.incCol(-1);
-
-                // If the name is empty (it is not alphanumeric string slice), then it is an unknown character or
-                // sequence of characters
-                if (name.isEmpty()) {
-                    return new Token.Unparsed(Token.Unparsed.Fail.UNKNOWN_SEQUENCE_OF_CHARACTERS,
-                                    new Token.Location(st.file(), st.col(), st.row()));
-                }
-                // Trying to get a keyword with that name
-                else if (Token.Keyword.getKeywordKindByName(name.toString()) != Token.Keyword.Kind.NONE) {
-                    return makeKeyword(
-                            Token.Keyword.getKeywordKindByName(name.toString()),
-                            st);
-                }
-                // If none of the above fits, it is an identifier
-                else {
-                    return makeIdent(name.toString(), st);
-                }
+                String name = getIdentOrKeywordName(source, st);
+                return tryParseIdentOrKeyword(name, st);
             }
 
         }

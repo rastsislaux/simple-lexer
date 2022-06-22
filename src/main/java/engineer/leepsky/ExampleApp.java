@@ -1,17 +1,26 @@
 package engineer.leepsky;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class ExampleApp {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Scanner in = new Scanner(System.in);
         Lexer lexer;
         String input;
         do {
             System.out.print("> ");
             input = in.nextLine();
-            lexer = new Lexer(input, "<stdin>");
+            if (!input.startsWith("#load ")) {
+                lexer = new Lexer(input, "<stdin>");
+            } else {
+                 lexer = new Lexer(
+                         new String(Files.readAllBytes(Paths.get(input.substring(6)))),
+                         input.substring(6));
+            }
             int i = 1;
             while (lexer.nextToken()) {
                 switch (lexer.token().toStringNL().substring(6, 8)) {
@@ -38,28 +47,28 @@ public class ExampleApp {
                                     lexer.token().getLoc().col());
 
                     case "St" ->
-                            System.out.printf("%d. String Literal, content: \"%s\", loc: %d:%d%n",
+                            System.out.printf("%d. String Literal, content: `%s`, loc: %d:%d%n",
                                     i++,
                                     ((Token.StringLiteral)(lexer.token())).getContent(),
                                     lexer.token().getLoc().row(),
                                     lexer.token().getLoc().col());
 
                     case "In" ->
-                            System.out.printf("%d. Int Literal, content: \"%s\", loc: %d:%d%n",
+                            System.out.printf("%d. Int Literal, content: `%s`, loc: %d:%d%n",
                                     i++,
                                     ((Token.IntLiteral)(lexer.token())).getValue(),
                                     lexer.token().getLoc().row(),
                                     lexer.token().getLoc().col());
 
                     case "Fl" ->
-                            System.out.printf("%d. Int Literal, content: \"%s\", loc: %d:%d%n",
+                            System.out.printf("%d. Int Literal, content: `%s`, loc: %d:%d%n",
                                     i++,
                                     ((Token.FloatLiteral)(lexer.token())).getValue(),
                                     lexer.token().getLoc().row(),
                                     lexer.token().getLoc().col());
 
                     case "Un" ->
-                            System.out.printf("%d. Unparsed, fail: \"%s\", loc: %d:%d%n",
+                            System.out.printf("%d. Unparsed, fail: `%s`, loc: %d:%d%n",
                                     i++,
                                     ((Token.Unparsed)(lexer.token())).getFail(),
                                     lexer.token().getLoc().row(),
@@ -71,5 +80,4 @@ public class ExampleApp {
             }
         } while (!input.equals("#q"));
     }
-
 }
