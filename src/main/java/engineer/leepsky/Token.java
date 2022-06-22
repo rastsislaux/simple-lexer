@@ -44,7 +44,7 @@ public abstract class Token {
         }
 
         @Override
-        public String type() {
+        public String toStringNL() {
             return "Token.Identifier{" + name + '}';
         }
 
@@ -103,7 +103,7 @@ public abstract class Token {
         }
 
         @Override
-        public String type() {
+        public String toStringNL() {
             return "Token.Keyword{" + keywordKind + '}';
         }
 
@@ -142,10 +142,12 @@ public abstract class Token {
             ARROW,
             ASTERISK,
             SLASH,
+            HASHTAG,
             PERCENT,
             COLON,
             DBL_COLON,
             SEMICOLON,
+            DOT
         }
 
         private Kind specialKind;
@@ -172,7 +174,7 @@ public abstract class Token {
         }
 
         @Override
-        public String type() {
+        public String toStringNL() {
             return "Token.Special{" + specialKind + '}';
         }
 
@@ -191,19 +193,178 @@ public abstract class Token {
         }
     }
 
-    public static class None extends Token {
-        None(Location loc) { super(loc); }
+    public static class StringLiteral extends Token {
+
+        private String content;
+       StringLiteral(String content, Location loc) {
+           super(loc);
+           this.content = content;
+       }
+
+        public String getContent() {
+            return content;
+        }
+
+        public void setContent(String content) {
+            this.content = content;
+        }
+
+        @Override
+        public String toStringNL() {
+            return "Token.StringLiteral{\"" + content + "\"}";
+        }
 
         @Override
         public String toString() {
-            return "Token.None{" +
-                    "loc=" + loc +
+            return "StringLiteral{" +
+                    "content='" + content + '\'' +
+                    ", loc=" + loc +
                     '}';
         }
 
         @Override
-        public String type() {
-            return "Token.None";
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            if (!super.equals(o)) return false;
+            StringLiteral that = (StringLiteral) o;
+            return Objects.equals(content, that.content);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(super.hashCode(), content);
+        }
+    }
+
+    public static class IntLiteral extends Token {
+        private String value;
+
+        public IntLiteral(String value, Location loc) {
+            super(loc);
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public void setValue(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return "IntLiteral{" +
+                    "value=" + value +
+                    ", loc=" + loc +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            if (!super.equals(o)) return false;
+            IntLiteral that = (IntLiteral) o;
+            return Objects.equals(value, that.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(super.hashCode(), value);
+        }
+
+        @Override
+        public String toStringNL() {
+            return "Token.IntLiteral{\"" + value + "\"}";
+        }
+    }
+
+    public static class FloatLiteral extends Token {
+        private String value;
+
+        public FloatLiteral(String value, Location loc) {
+            super(loc);
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public void setValue(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return "FloatLiteral{" +
+                    "value=" + value +
+                    ", loc=" + loc +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            if (!super.equals(o)) return false;
+            FloatLiteral that = (FloatLiteral) o;
+            return Objects.equals(value, that.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(super.hashCode(), value);
+        }
+
+        @Override
+        public String toStringNL() {
+            return "Token.FloatLiteral{\"" + value + "\"}";
+        }
+    }
+    public static class Unparsed extends Token {
+
+        enum Fail {
+            UNCLOSED_STRING_LITERAL,
+            UNKNOWN_SEQUENCE_OF_CHARACTERS,
+            INVALID_FLOAT
+        }
+
+        private Fail fail;
+
+        Fail getFail() {
+            return fail;
+        }
+
+        Unparsed(Fail fail, Location loc) { super(loc); this.fail = fail; }
+
+        @Override
+        public String toString() {
+            return "Token.Unparsed{" +
+                    "fail=" + fail +
+                    ", loc=" + loc +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            if (!super.equals(o)) return false;
+            Unparsed unparsed = (Unparsed) o;
+            return fail == unparsed.fail;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(super.hashCode(), fail);
+        }
+
+        @Override
+        public String toStringNL() {
+            return "Token.Unparsed{" + fail + '}';
         }
     }
 
@@ -214,7 +375,7 @@ public abstract class Token {
                 '}';
     }
 
-    public String type() {
+    public String toStringNL() {
         return "Token.Abstract";
     }
 

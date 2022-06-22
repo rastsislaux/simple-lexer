@@ -5,16 +5,28 @@ import java.util.*;
 public class Lexer {
 
     // Kind of macros to construct tokens easier
-    private static Token makeSpecial(Token.Special.Kind kind, String file, long col, long row) {
-        return new Token.Special(kind, new Token.Location(file, col, row));
+    private static Token makeSpecial(Token.Special.Kind kind, ParsingState st) {
+        return new Token.Special(kind, new Token.Location(st.file(), st.col(), st.row()));
     }
 
-    private static Token makeKeyword(Token.Keyword.Kind kind, String file, long col, long row) {
-        return new Token.Keyword(kind, new Token.Location(file, col, row));
+    private static Token makeKeyword(Token.Keyword.Kind kind, ParsingState st) {
+        return new Token.Keyword(kind, new Token.Location(st.file(), st.col(), st.row()));
     }
 
-    private static Token makeIdent(String name, String file, long col, long row) {
-        return new Token.Identifier(name, new Token.Location(file, col, row));
+    private static Token makeIdent(String name, ParsingState st) {
+        return new Token.Identifier(name, new Token.Location(st.file(), st.col() - name.length() + 1, st.row()));
+    }
+
+    private static Token makeString(String content, ParsingState st) {
+        return new Token.StringLiteral(content, new Token.Location(st.file(), st.col() - content.length() - 1, st.row()));
+    }
+
+    private static Token makeInt(String value, ParsingState st) {
+        return new Token.IntLiteral(value, new Token.Location(st.file(), st.col(), st.row()));
+    }
+
+    private static Token makeFloat(String value, ParsingState st) {
+        return new Token.FloatLiteral(value, new Token.Location(st.file(), st.col(), st.row()));
     }
 
     private List<Token> tokens = new ArrayList<>();
@@ -47,94 +59,230 @@ public class Lexer {
     private static final char COMMA         = ',';
     private static final char SEMICOLON     = ';';
 
+    private static final char DBL_QUOTE     = '"';
+    private static final char DOT           = '.';
+    private static final char HASHTAG       = '#';
+    private static final char ZERO          = '0';
+    private static final char ONE           = '1';
+    private static final char TWO           = '2';
+    private static final char THREE         = '3';
+    private static final char FOUR          = '4';
+    private static final char FIVE          = '5';
+    private static final char SIX           = '6';
+    private static final char SEVEN         = '7';
+    private static final char EIGHT         = '8';
+    private static final char NINE          = '9';
+
+    private static Token parseChar(String source, ParsingState st) {
+
+        if (source.charAt(st.curIndex) == '\n') { st.col = 1; st.incRow(1); return null; }
+        else st.incCol(1);
+
+        switch (source.charAt(st.curIndex())) {
+
+            case SLASH          -> { return makeSpecial(Token.Special.Kind.SLASH,        st); }
+            case CURLY_OPEN     -> { return makeSpecial(Token.Special.Kind.CURLY_OPEN,   st); }
+            case CURLY_CLOSE    -> { return makeSpecial(Token.Special.Kind.CURLY_CLOSE,  st); }
+            case PAREN_OPEN     -> { return makeSpecial(Token.Special.Kind.PAREN_OPEN,   st); }
+            case PAREN_CLOSE    -> { return makeSpecial(Token.Special.Kind.PAREN_CLOSE,  st); }
+            case ASTERISK       -> { return makeSpecial(Token.Special.Kind.ASTERISK,     st); }
+            case PLUS           -> { return makeSpecial(Token.Special.Kind.PLUS,         st); }
+            case PERCENT        -> { return makeSpecial(Token.Special.Kind.PERCENT,      st); }
+            case BANG           -> { return makeSpecial(Token.Special.Kind.BANG,         st); }
+            case BAR            -> { return makeSpecial(Token.Special.Kind.BAR,          st); }
+            case COMMA          -> { return makeSpecial(Token.Special.Kind.COMMA,        st); }
+            case SEMICOLON      -> { return makeSpecial(Token.Special.Kind.SEMICOLON,    st); }
+            case DOT            -> { return makeSpecial(Token.Special.Kind.DOT,          st); }
+            case HASHTAG        -> { return makeSpecial(Token.Special.Kind.HASHTAG,      st); }
+            case SPACE          -> { return null; }
+
+            case ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE -> {
+                StringBuilder number = new StringBuilder();
+                boolean hasDot = false;
+                while (st.curIndex() != source.length() &&
+                        (Character.isDigit(st.curChar(source)) || st.curChar(source) == DOT)) {
+                    if (st.curChar(source) == DOT && hasDot)
+                        return new Token.Unparsed(Token.Unparsed.Fail.INVALID_FLOAT, new Token.Location(st.file(), st.col(), st.row()));
+                    if (st.curChar(source) == DOT)
+                        hasDot = true;
+                    number.append(st.curChar(source));
+                    st.incIndex(1); st.incCol(1);
+                }
+                st.incCol(-1); st.incIndex(-1);
+                if (hasDot) return makeFloat(number.toString(), st);
+                return makeInt(number.toString(), st);
+            }
+
+            case DBL_QUOTE -> {
+                StringBuilder content = new StringBuilder();
+                st.incIndex(1); st.incCol(1);
+                while (source.charAt(st.curIndex()) != DBL_QUOTE) {
+                    if (source.charAt(st.curIndex()) == '\n' || st.curIndex() == source.length() - 1) {
+                        return new Token.Unparsed(Token.Unparsed.Fail.UNCLOSED_STRING_LITERAL,
+                                new Token.Location(st.file(), st.col(), st.row()));
+                    }
+                    content.append(source.charAt(st.curIndex()));
+                    st.incIndex(1); st.incCol(1);
+                }
+                return makeString(content.toString(), st);
+            }
+
+            case COLON -> {
+                if (st.curIndex() != source.length() - 1 && source.charAt(st.curIndex() + 1) == COLON) {
+                    st.incIndex(1); st.incCol(1);
+                    return makeSpecial(Token.Special.Kind.DBL_COLON, st);
+                }
+                else
+                    return makeSpecial(Token.Special.Kind.COLON, st);
+            }
+
+            case EQUALS -> {
+                if (st.curIndex() != source.length() - 1 && source.charAt(st.curIndex() + 1) == EQUALS) {
+                    st.incIndex(1); st.incCol(1);
+                    return makeSpecial(Token.Special.Kind.DBL_EQUALS, st);
+                }
+                else
+                    return makeSpecial(Token.Special.Kind.EQUALS, st);
+            }
+
+            case DASH -> {
+                if (st.curIndex() != source.length() - 1 && source.charAt(st.curIndex() + 1) == BIGGER) {
+                    st.incIndex(1); st.incCol(1);
+                    return makeSpecial(Token.Special.Kind.ARROW, st);
+                }
+                else
+                    return makeSpecial(Token.Special.Kind.DASH, st);
+            }
+
+            default -> {
+
+                // If none of the above fits, then try to parse as identifier or keyword
+                StringBuilder name = new StringBuilder();
+                while (st.curIndex() != source.length() &&
+                        (Character.isLetterOrDigit(source.charAt(st.curIndex())) || source.charAt(st.curIndex()) == '_')) {
+                    name.append(source.charAt(st.curIndex()));
+                    st.incIndex(1); st.incCol(1);
+                }
+                st.incIndex(-1); st.incCol(-1);
+
+                // If the name is empty (it is not alphanumeric string slice), then it is an unknown character or
+                // sequence of characters
+                if (name.isEmpty()) {
+                    return new Token.Unparsed(Token.Unparsed.Fail.UNKNOWN_SEQUENCE_OF_CHARACTERS,
+                                    new Token.Location(st.file(), st.col(), st.row()));
+                }
+                // Trying to get a keyword with that name
+                else if (Token.Keyword.getKeywordKindByName(name.toString()) != Token.Keyword.Kind.NONE) {
+                    return makeKeyword(
+                            Token.Keyword.getKeywordKindByName(name.toString()),
+                            st);
+                }
+                // If none of the above fits, it is an identifier
+                else {
+                    return makeIdent(name.toString(), st);
+                }
+            }
+
+        }
+    }
+
+    private static final class ParsingState {
+        private int curIndex;
+        private final int length;
+        private final String file;
+        private int col;
+        private int row;
+
+        private ParsingState(int curIndex, int length, String file, int col, int row) {
+            this.curIndex = curIndex;
+            this.length = length;
+            this.file = file;
+            this.col = col;
+            this.row = row;
+        }
+
+        void incIndex(int i) {
+            curIndex = curIndex + i;
+        }
+
+        public int curIndex() {
+            return curIndex;
+        }
+
+        public char curChar(String source) {
+            return source.charAt(curIndex);
+        }
+
+        public int length() {
+            return length;
+        }
+
+        public String file() {
+            return file;
+        }
+
+        public int col() {
+            return col;
+        }
+
+        public void incCol(int i) {
+            col = col + i;
+        }
+
+        public int row() {
+            return row;
+        }
+
+        public void incRow(int i) {
+            row = row + i;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            if (obj == null || obj.getClass() != this.getClass()) return false;
+            var that = (ParsingState) obj;
+            return this.curIndex == that.curIndex &&
+                    this.length == that.length &&
+                    Objects.equals(this.file, that.file) &&
+                    this.col == that.col &&
+                    this.row == that.row;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(curIndex, length, file, col, row);
+        }
+
+        @Override
+        public String toString() {
+            return "ParsingState[" +
+                    "curIndex=" + curIndex + ", " +
+                    "length=" + length + ", " +
+                    "file=" + file + ", " +
+                    "col=" + col + ", " +
+                    "row=" + row + ']';
+        }
+
+
+    }
+
     // Set source (lexing itself)
     private void setSource(String source, String path) {
 
         currentToken = -1;
 
         List<Token> tokenList = new ArrayList<>();
-        long row = 1;
-        long col = 0;
-        char_loop: for (int i = 0; i < source.length(); i++) {
 
-            if (source.charAt(i) == '\n') { col = 1; row++; continue; }
-            else col++;
+        ParsingState parsingState = new ParsingState(0, source.length(), path, 0, 1);
 
-            Token toAdd = null;
-            switch (source.charAt(i)) {
-
-                case SLASH          -> toAdd = makeSpecial(Token.Special.Kind.SLASH,        path, col, row);
-                case CURLY_OPEN     -> toAdd = makeSpecial(Token.Special.Kind.CURLY_OPEN,   path, col, row);
-                case CURLY_CLOSE    -> toAdd = makeSpecial(Token.Special.Kind.CURLY_CLOSE,  path, col, row);
-                case PAREN_OPEN     -> toAdd = makeSpecial(Token.Special.Kind.PAREN_OPEN,   path, col, row);
-                case PAREN_CLOSE    -> toAdd = makeSpecial(Token.Special.Kind.PAREN_CLOSE,  path, col, row);
-                case ASTERISK       -> toAdd = makeSpecial(Token.Special.Kind.ASTERISK,     path, col, row);
-                case PLUS           -> toAdd = makeSpecial(Token.Special.Kind.PLUS,         path, col, row);
-                case PERCENT        -> toAdd = makeSpecial(Token.Special.Kind.PERCENT,      path, col, row);
-                case BANG           -> toAdd = makeSpecial(Token.Special.Kind.BANG,         path, col, row);
-                case BAR            -> toAdd = makeSpecial(Token.Special.Kind.BAR,          path, col, row);
-                case COMMA          -> toAdd = makeSpecial(Token.Special.Kind.COMMA,        path, col, row);
-                case SEMICOLON      -> toAdd = makeSpecial(Token.Special.Kind.SEMICOLON,    path, col, row);
-                case SPACE          -> { continue; }
-
-                case COLON -> {
-                    if (i != source.length() - 1 && source.charAt(i + 1) == COLON) {
-                        toAdd = makeSpecial(Token.Special.Kind.DBL_COLON, path, col, row);
-                        i++; col++;
-                    }
-                    else
-                        toAdd = makeSpecial(Token.Special.Kind.COLON, path, col, row);
-                }
-
-                case EQUALS -> {
-                    if (i != source.length() - 1 && source.charAt(i + 1) == EQUALS) {
-                        toAdd = makeSpecial(Token.Special.Kind.DBL_EQUALS, path, col, row);
-                        i++; col++;
-                    }
-                    else
-                        toAdd = makeSpecial(Token.Special.Kind.EQUALS, path, col, row);
-                }
-
-                case DASH -> {
-                    if (i != source.length() - 1 && source.charAt(i + 1) == BIGGER) {
-                        toAdd = makeSpecial(Token.Special.Kind.ARROW, path, col, row);
-                        i++; col++;
-                    }
-                    else
-                        toAdd = makeSpecial(Token.Special.Kind.DASH, path, col, row);
-                }
-
-                default -> {
-
-                    // If none of the above fits, then try to parse as identifier or keyword
-                    StringBuilder name = new StringBuilder();
-                    while (i != source.length() && Character.isLetterOrDigit(source.charAt(i))) {
-                        name.append(source.charAt(i++));
-                    }
-                    i--;
-
-                    // If the name is empty (it is not alphanumeric string slice), than it is an unknown character or
-                    // sequence of characters
-                    if (name.isEmpty()) {
-                        tokenList.add(new Token.None(new Token.Location(path, col, row)));
-                        break char_loop;
-                    }
-                    // Trying to get a keyword with that name
-                    else if (Token.Keyword.getKeywordKindByName(name.toString()) != Token.Keyword.Kind.NONE) {
-                        toAdd = makeKeyword(
-                                Token.Keyword.getKeywordKindByName(name.toString()),
-                                path, col, row);
-                        col += name.length();
-                    }
-                    // If none of the above fits, it is an identifier
-                    else {
-                        toAdd = makeIdent(name.toString(), path, col, row);
-                        col += name.length();
-                    }
-                }
-
+        while (parsingState.curIndex() < parsingState.length()) {
+            Token newToken = parseChar(source, parsingState);
+            if (newToken != null) {
+                tokenList.add(newToken);
             }
-            tokenList.add(toAdd);
+            if (newToken instanceof Token.Unparsed) { break; }
+            parsingState.incIndex(1);
         }
 
         this.tokens = tokenList;

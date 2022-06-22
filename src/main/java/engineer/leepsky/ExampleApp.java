@@ -12,30 +12,60 @@ public class ExampleApp {
             System.out.print("> ");
             input = in.nextLine();
             lexer = new Lexer(input, "<stdin>");
-            int i = 0;
+            int i = 1;
             while (lexer.nextToken()) {
-                switch (lexer.token().type().substring(6, 7)) {
+                switch (lexer.token().toStringNL().substring(6, 8)) {
 
-                    case "I" ->
+                    case "Id" ->
                         System.out.printf("%d. Identifier, name: `%s`, loc: %d:%d%n",
                                 i++,
                                 ((Token.Identifier)(lexer.token())).getName(),
                                 lexer.token().getLoc().row(),
                                 lexer.token().getLoc().col());
 
-                    case "K" ->
+                    case "Ke" ->
                             System.out.printf("%d. Keyword, name: `%s`, loc: %d:%d%n",
                                     i++,
                                     ((Token.Keyword)(lexer.token())).getKind(),
                                     lexer.token().getLoc().row(),
                                     lexer.token().getLoc().col());
 
-                    case "S" ->
+                    case "Sp" ->
                             System.out.printf("%d. Special, name: `%s`, loc: %d:%d%n",
                                     i++,
                                     ((Token.Special)(lexer.token())).getKind(),
                                     lexer.token().getLoc().row(),
                                     lexer.token().getLoc().col());
+
+                    case "St" ->
+                            System.out.printf("%d. String Literal, content: \"%s\", loc: %d:%d%n",
+                                    i++,
+                                    ((Token.StringLiteral)(lexer.token())).getContent(),
+                                    lexer.token().getLoc().row(),
+                                    lexer.token().getLoc().col());
+
+                    case "In" ->
+                            System.out.printf("%d. Int Literal, content: \"%s\", loc: %d:%d%n",
+                                    i++,
+                                    ((Token.IntLiteral)(lexer.token())).getValue(),
+                                    lexer.token().getLoc().row(),
+                                    lexer.token().getLoc().col());
+
+                    case "Fl" ->
+                            System.out.printf("%d. Int Literal, content: \"%s\", loc: %d:%d%n",
+                                    i++,
+                                    ((Token.FloatLiteral)(lexer.token())).getValue(),
+                                    lexer.token().getLoc().row(),
+                                    lexer.token().getLoc().col());
+
+                    case "Un" ->
+                            System.out.printf("%d. Unparsed, fail: \"%s\", loc: %d:%d%n",
+                                    i++,
+                                    ((Token.Unparsed)(lexer.token())).getFail(),
+                                    lexer.token().getLoc().row(),
+                                    lexer.token().getLoc().col());
+
+                    default -> System.out.println(lexer.token());
 
                 }
             }
