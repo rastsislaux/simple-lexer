@@ -4,7 +4,7 @@ import java.util.Objects;
 
 public abstract class Token {
 
-    record Location(String pathToFile, long col, long row) { }
+    record Location(String pathToFile, int col, int row) { }
 
     protected Location loc;
 

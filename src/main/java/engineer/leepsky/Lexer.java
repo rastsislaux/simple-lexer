@@ -1,37 +1,39 @@
 package engineer.leepsky;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class Lexer {
 
     // Kind of macros to construct tokens easier
     private Token makeSpecial(Token.Special.Kind kind) {
-        return new Token.Special(kind, new Token.Location(file_path, col, row));
+        return new Token.Special(kind, new Token.Location(filePath, col, row));
     }
 
     private Token makeKeyword(Token.Keyword.Kind kind) {
-        return new Token.Keyword(kind, new Token.Location(file_path, col, row));
+        return new Token.Keyword(kind, new Token.Location(filePath, col, row));
     }
 
     private Token makeIdent(String name) {
-        return new Token.Identifier(name, new Token.Location(file_path, col - name.length() + 1, row));
+        return new Token.Identifier(name, new Token.Location(filePath, col - name.length() + 1, row));
     }
 
     private Token makeString(String content) {
-        return new Token.StringLiteral(content, new Token.Location(file_path, col - content.length() - 1, row));
+        return new Token.StringLiteral(content, new Token.Location(filePath, col - content.length() - 1, row));
     }
 
     private Token makeInt(String value) {
-        return new Token.IntLiteral(value, new Token.Location(file_path, col, row));
+        return new Token.IntLiteral(value, new Token.Location(filePath, col, row));
     }
 
     private Token makeFloat(String value) {
-        return new Token.FloatLiteral(value, new Token.Location(file_path, col, row));
+        return new Token.FloatLiteral(value, new Token.Location(filePath, col, row));
     }
 
     // State
 
-    private Tokens tokenList = new Tokens();
+    private final List<Token> tokenList = new ArrayList<>();
 
     private int curIndex;
 
@@ -39,7 +41,7 @@ public class Lexer {
         return source.charAt(curIndex);
     }
     
-    private final String file_path;
+    private final String filePath;
 
     private final String source;
     
@@ -49,20 +51,20 @@ public class Lexer {
 
     // Logic itself
 
-    public static Tokens lex(String source, String path) {
+    public static List<Token> lex(String source, String path) {
         Lexer lexer = new Lexer(source, path);
-        lexer._lex();
+        lexer.run();
         return lexer.tokenList;
     }
 
     private Lexer(String source, String path) {
         this.source = source;
-        this.file_path = path;
+        this.filePath = path;
         col = 0;
         row = 1;
     }
     
-    private void _lex() {
+    private void run() {
         while (curIndex < source.length()) {
             Token newToken = parseChar();
             if (newToken != null) {
@@ -75,7 +77,7 @@ public class Lexer {
 
     // Parsed characters
 
-    static class Char {
+    private static class Char {
         private Char() { }
         private static final char COLON     = ':';
         private static final char EQUALS    = '=';
@@ -119,33 +121,33 @@ public class Lexer {
         private static final char LESSER        = '<';
     }
 
-    static class Unreachable extends RuntimeException {
+    private static class Unreachable extends RuntimeException {
         public Unreachable(String msg) { super(msg); }
     }
 
     private Token parseOneCharToken() throws Unreachable {
-        switch (curChar()) {
-            case Char.SLASH          -> { return makeSpecial(Token.Special.Kind.SLASH        ); }
-            case Char.CURLY_OPEN     -> { return makeSpecial(Token.Special.Kind.CURLY_OPEN   ); }
-            case Char.CURLY_CLOSE    -> { return makeSpecial(Token.Special.Kind.CURLY_CLOSE  ); }
-            case Char.PAREN_OPEN     -> { return makeSpecial(Token.Special.Kind.PAREN_OPEN   ); }
-            case Char.PAREN_CLOSE    -> { return makeSpecial(Token.Special.Kind.PAREN_CLOSE  ); }
-            case Char.ASTERISK       -> { return makeSpecial(Token.Special.Kind.ASTERISK     ); }
-            case Char.PLUS           -> { return makeSpecial(Token.Special.Kind.PLUS         ); }
-            case Char.PERCENT        -> { return makeSpecial(Token.Special.Kind.PERCENT      ); }
-            case Char.BANG           -> { return makeSpecial(Token.Special.Kind.BANG         ); }
-            case Char.BAR            -> { return makeSpecial(Token.Special.Kind.BAR          ); }
-            case Char.COMMA          -> { return makeSpecial(Token.Special.Kind.COMMA        ); }
-            case Char.SEMICOLON      -> { return makeSpecial(Token.Special.Kind.SEMICOLON    ); }
-            case Char.DOT            -> { return makeSpecial(Token.Special.Kind.DOT          ); }
-            case Char.HASHTAG        -> { return makeSpecial(Token.Special.Kind.HASHTAG      ); }
-            case Char.SQUARE_OPEN    -> { return makeSpecial(Token.Special.Kind.SQUARE_OPEN  ); }
-            case Char.SQUARE_CLOSE   -> { return makeSpecial(Token.Special.Kind.SQUARE_CLOSE ); }
-            case Char.LESSER         -> { return makeSpecial(Token.Special.Kind.LESSER       ); }
-            case Char.BIGGER         -> { return makeSpecial(Token.Special.Kind.BIGGER       ); }
-            case Char.SPACE          -> { return null; }
-            default             -> { throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:83 is not exhaustive."); }
-        }
+        return switch (curChar()) {
+            case Char.SLASH          -> makeSpecial(Token.Special.Kind.SLASH        );
+            case Char.CURLY_OPEN     -> makeSpecial(Token.Special.Kind.CURLY_OPEN   );
+            case Char.CURLY_CLOSE    -> makeSpecial(Token.Special.Kind.CURLY_CLOSE  );
+            case Char.PAREN_OPEN     -> makeSpecial(Token.Special.Kind.PAREN_OPEN   );
+            case Char.PAREN_CLOSE    -> makeSpecial(Token.Special.Kind.PAREN_CLOSE  );
+            case Char.ASTERISK       -> makeSpecial(Token.Special.Kind.ASTERISK     );
+            case Char.PLUS           -> makeSpecial(Token.Special.Kind.PLUS         );
+            case Char.PERCENT        -> makeSpecial(Token.Special.Kind.PERCENT      );
+            case Char.BANG           -> makeSpecial(Token.Special.Kind.BANG         );
+            case Char.BAR            -> makeSpecial(Token.Special.Kind.BAR          );
+            case Char.COMMA          -> makeSpecial(Token.Special.Kind.COMMA        );
+            case Char.SEMICOLON      -> makeSpecial(Token.Special.Kind.SEMICOLON    );
+            case Char.DOT            -> makeSpecial(Token.Special.Kind.DOT          );
+            case Char.HASHTAG        -> makeSpecial(Token.Special.Kind.HASHTAG      );
+            case Char.SQUARE_OPEN    -> makeSpecial(Token.Special.Kind.SQUARE_OPEN  );
+            case Char.SQUARE_CLOSE   -> makeSpecial(Token.Special.Kind.SQUARE_CLOSE );
+            case Char.LESSER         -> makeSpecial(Token.Special.Kind.LESSER       );
+            case Char.BIGGER         -> makeSpecial(Token.Special.Kind.BIGGER       );
+            case Char.SPACE          -> null;
+            default                  -> throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:83 is not exhaustive.");
+        };
     }
 
     private Token parseNumericToken() {
@@ -154,7 +156,7 @@ public class Lexer {
         while (curIndex != source.length() &&
                 (Character.isDigit(curChar()) || curChar() == Char.DOT)) {
             if (curChar() == Char.DOT && hasDot)
-                return new Token.Unparsed(Token.Unparsed.Fail.INVALID_FLOAT, new Token.Location(file_path, col, row));
+                return new Token.Unparsed(Token.Unparsed.Fail.INVALID_FLOAT, new Token.Location(filePath, col, row));
             if (curChar() == Char.DOT)
                 hasDot = true;
             number.append(curChar());
@@ -171,7 +173,7 @@ public class Lexer {
         while (curChar() != Char.DBL_QUOTE) {
             if (curChar() == '\n' || curIndex == source.length() - 1) {
                 return new Token.Unparsed(Token.Unparsed.Fail.UNCLOSED_STRING_LITERAL,
-                        new Token.Location(file_path, col, row));
+                        new Token.Location(filePath, col, row));
             }
             if (curChar() != Char.BACKSLASH) {
                 content.append(curChar());
@@ -189,11 +191,11 @@ public class Lexer {
                     case Char.BACKSLASH  -> content.append('\\');
                     case Char.DBL_QUOTE  -> content.append('"');
                     default         -> { return new Token.Unparsed(Token.Unparsed.Fail.INVALID_STRING_ESCAPE,
-                            new Token.Location(file_path, col, row)); }
+                            new Token.Location(filePath, col, row)); }
                 }
                 curIndex++; col++;
             } else return new Token.Unparsed(Token.Unparsed.Fail.INVALID_STRING_ESCAPE,
-                    new Token.Location(file_path, col, row));
+                    new Token.Location(filePath, col, row));
         }
         return makeString(content.toString());
     }
@@ -213,10 +215,10 @@ public class Lexer {
         switch (curChar()) {
             case Char.COLON -> {
                 if (curIndex != source.length() - 1 && source.charAt(curIndex + 1) == Char.COLON) {
-                    curIndex++; col++;
+                    curIndex++;
+                    col++;
                     return makeSpecial(Token.Special.Kind.DBL_COLON);
-                }
-                else
+                } else
                     return makeSpecial(Token.Special.Kind.COLON);
             }
 
@@ -247,7 +249,7 @@ public class Lexer {
         // sequence of characters
         if (name.isEmpty()) {
             return new Token.Unparsed(Token.Unparsed.Fail.UNKNOWN_SEQUENCE_OF_CHARACTERS,
-                    new Token.Location(file_path, col, row));
+                    new Token.Location(filePath, col, row));
         }
         // Trying to get a keyword with that name
         else if (Token.Keyword.getKeywordKindByName(name) != Token.Keyword.Kind.NONE) {
@@ -261,12 +263,9 @@ public class Lexer {
     }
 
     private Token parseChar() {
-
         if (curChar() == '\n') { col = 0; row++; return null; }
         else col++;
-
-        switch (curChar()) {
-
+        return switch (curChar()) {
             case Char.SLASH,
                     Char.CURLY_OPEN,
                     Char.CURLY_CLOSE,
@@ -285,29 +284,21 @@ public class Lexer {
                     Char.SQUARE_CLOSE,
                     Char.SPACE,
                     Char.LESSER,
-                    Char.BIGGER -> {
-                return parseOneCharToken();
-            }
-
-            case Char.ZERO, Char.ONE, Char.TWO, Char.THREE, Char.FOUR, Char.FIVE, Char.SIX, Char.SEVEN, Char.EIGHT, Char.NINE -> {
-                return parseNumericToken();
-            }
-
-            case Char.DBL_QUOTE -> {
-                return parseStringLiteral();
-            }
-
-            case Char.COLON, Char.EQUALS, Char.DASH -> {
-                return parseOtherTokens();
-            }
-
-            default -> {
-                // If none of the above fits, then try to parse as identifier or keyword
-                String name = getIdentOrKeywordName();
-                return tryParseIdentOrKeyword(name);
-            }
-
-        }
+                    Char.BIGGER -> parseOneCharToken();
+            case Char.ZERO,
+                    Char.ONE,
+                    Char.TWO,
+                    Char.THREE,
+                    Char.FOUR,
+                    Char.FIVE,
+                    Char.SIX,
+                    Char.SEVEN,
+                    Char.EIGHT,
+                    Char.NINE -> parseNumericToken();
+            case Char.DBL_QUOTE -> parseStringLiteral();
+            case Char.COLON, Char.EQUALS, Char.DASH -> parseOtherTokens();
+            default -> tryParseIdentOrKeyword(getIdentOrKeywordName());
+        };
     }
 
     @Override
@@ -315,7 +306,7 @@ public class Lexer {
         return "Lexer{" +
                 "tokenList=" + tokenList +
                 ", curIndex=" + curIndex +
-                ", file_path='" + file_path + '\'' +
+                ", file_path='" + filePath + '\'' +
                 ", source='" + source + '\'' +
                 ", col=" + col +
                 ", row=" + row +
@@ -327,11 +318,11 @@ public class Lexer {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Lexer lexer = (Lexer) o;
-        return curIndex == lexer.curIndex && col == lexer.col && row == lexer.row && Objects.equals(tokenList, lexer.tokenList) && Objects.equals(file_path, lexer.file_path) && Objects.equals(source, lexer.source);
+        return curIndex == lexer.curIndex && col == lexer.col && row == lexer.row && Objects.equals(tokenList, lexer.tokenList) && Objects.equals(filePath, lexer.filePath) && Objects.equals(source, lexer.source);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(tokenList, curIndex, file_path, source, col, row);
+        return Objects.hash(tokenList, curIndex, filePath, source, col, row);
     }
 }
