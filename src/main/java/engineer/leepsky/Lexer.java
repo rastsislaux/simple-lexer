@@ -24,11 +24,11 @@ public class Lexer {
     }
 
     private Token makeInt(String value) {
-        return new Token.IntLiteral(value, new Token.Location(filePath, col, row));
+        return new Token.IntLiteral(value, new Token.Location(filePath, col - value.length() + 1, row));
     }
 
     private Token makeFloat(String value) {
-        return new Token.FloatLiteral(value, new Token.Location(filePath, col, row));
+        return new Token.FloatLiteral(value, new Token.Location(filePath, col - value.length() + 1, row));
     }
 
     // State
@@ -121,6 +121,7 @@ public class Lexer {
         private static final char QUOTE         = '\'';
         private static final char LESSER        = '<';
         private static final char AMPERSAND     = '&';
+        private static final char UNDERSCORE    = '_';
     }
 
     private static class Unreachable extends RuntimeException {
@@ -148,7 +149,7 @@ public class Lexer {
             case Char.BIGGER         -> makeSpecial(Token.Special.Kind.BIGGER       );
             case Char.AT             -> makeSpecial(Token.Special.Kind.AT           );
             case Char.SPACE          -> null;
-            default                  -> throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:83 is not exhaustive.");
+            default                  -> throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:131 is not exhaustive.");
         };
     }
 
@@ -156,7 +157,7 @@ public class Lexer {
         StringBuilder number = new StringBuilder();
         boolean hasDot = false;
         while (curIndex != source.length() &&
-                (Character.isDigit(curChar()) || curChar() == Char.DOT)) {
+                (Character.isDigit(curChar()) || curChar() == Char.DOT || curChar() == Char.UNDERSCORE)) {
             if (curChar() == Char.DOT && hasDot)
                 return new Token.Unparsed(Token.Unparsed.Fail.INVALID_FLOAT, new Token.Location(filePath, col, row));
             if (curChar() == Char.DOT)
@@ -259,7 +260,7 @@ public class Lexer {
                     return makeSpecial(Token.Special.Kind.AMPERSAND);
             }
 
-            default -> throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:176 is not exhaustive.");
+            default -> throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:218 is not exhaustive.");
         }
     }
 
