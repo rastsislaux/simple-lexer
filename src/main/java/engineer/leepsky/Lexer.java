@@ -79,6 +79,7 @@ public class Lexer {
 
     private static class Char {
         private Char() { }
+        private static final char AT        = '@';
         private static final char COLON     = ':';
         private static final char EQUALS    = '=';
         private static final char ASTERISK  = '*';
@@ -119,6 +120,7 @@ public class Lexer {
         private static final char CHAR_F        = 'f';
         private static final char QUOTE         = '\'';
         private static final char LESSER        = '<';
+        private static final char AMPERSAND     = '&';
     }
 
     private static class Unreachable extends RuntimeException {
@@ -139,12 +141,12 @@ public class Lexer {
             case Char.BAR            -> makeSpecial(Token.Special.Kind.BAR          );
             case Char.COMMA          -> makeSpecial(Token.Special.Kind.COMMA        );
             case Char.SEMICOLON      -> makeSpecial(Token.Special.Kind.SEMICOLON    );
-            case Char.DOT            -> makeSpecial(Token.Special.Kind.DOT          );
             case Char.HASHTAG        -> makeSpecial(Token.Special.Kind.HASHTAG      );
             case Char.SQUARE_OPEN    -> makeSpecial(Token.Special.Kind.SQUARE_OPEN  );
             case Char.SQUARE_CLOSE   -> makeSpecial(Token.Special.Kind.SQUARE_CLOSE );
             case Char.LESSER         -> makeSpecial(Token.Special.Kind.LESSER       );
             case Char.BIGGER         -> makeSpecial(Token.Special.Kind.BIGGER       );
+            case Char.AT             -> makeSpecial(Token.Special.Kind.AT           );
             case Char.SPACE          -> null;
             default                  -> throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:83 is not exhaustive.");
         };
@@ -167,10 +169,10 @@ public class Lexer {
         return makeInt(number.toString());
     }
 
-    private Token parseStringLiteral() {
+    private Token parseStringLiteral(char enclosingChar) {
         StringBuilder content = new StringBuilder();
         curIndex++; col++;
-        while (curChar() != Char.DBL_QUOTE) {
+        while (curChar() != enclosingChar) {
             if (curChar() == '\n' || curIndex == source.length() - 1) {
                 return new Token.Unparsed(Token.Unparsed.Fail.UNCLOSED_STRING_LITERAL,
                         new Token.Location(filePath, col, row));
@@ -211,8 +213,16 @@ public class Lexer {
         return name.toString();
     }
 
-    private Token parseOtherTokens() {
+    private Token parseOtherToken() {
         switch (curChar()) {
+
+            case Char.DOT -> {
+                if (curIndex != source.length() - 1 && Character.isDigit(source.charAt(curIndex + 1))) {
+                    return parseNumericToken();
+                } else
+                    return makeSpecial(Token.Special.Kind.DOT);
+            }
+
             case Char.COLON -> {
                 if (curIndex != source.length() - 1 && source.charAt(curIndex + 1) == Char.COLON) {
                     curIndex++;
@@ -240,6 +250,15 @@ public class Lexer {
                     return makeSpecial(Token.Special.Kind.DASH);
             }
 
+            case Char.AMPERSAND -> {
+                if (curIndex != source.length() - 1 && source.charAt(curIndex + 1) == Char.AMPERSAND) {
+                    curIndex++; col++;
+                    return makeSpecial(Token.Special.Kind.DBL_AMPERSAND);
+                }
+                else
+                    return makeSpecial(Token.Special.Kind.AMPERSAND);
+            }
+
             default -> throw new Unreachable("This code must be unreachable. Seems like switch statement at Lexer.java:176 is not exhaustive.");
         }
     }
@@ -257,9 +276,7 @@ public class Lexer {
                     Token.Keyword.getKeywordKindByName(name));
         }
         // If none of the above fits, it is an identifier
-        else {
-            return makeIdent(name);
-        }
+        else { return makeIdent(name); }
     }
 
     private Token parseChar() {
@@ -278,12 +295,12 @@ public class Lexer {
                     Char.BAR,
                     Char.COMMA,
                     Char.SEMICOLON,
-                    Char.DOT,
                     Char.HASHTAG,
                     Char.SQUARE_OPEN,
                     Char.SQUARE_CLOSE,
                     Char.SPACE,
                     Char.LESSER,
+                    Char.AT,
                     Char.BIGGER -> parseOneCharToken();
             case Char.ZERO,
                     Char.ONE,
@@ -295,8 +312,9 @@ public class Lexer {
                     Char.SEVEN,
                     Char.EIGHT,
                     Char.NINE -> parseNumericToken();
-            case Char.DBL_QUOTE -> parseStringLiteral();
-            case Char.COLON, Char.EQUALS, Char.DASH -> parseOtherTokens();
+            case Char.DBL_QUOTE -> parseStringLiteral(Char.DBL_QUOTE);
+            case Char.QUOTE     -> parseStringLiteral(Char.QUOTE);
+            case Char.COLON, Char.EQUALS, Char.DASH, Char.AMPERSAND, Char.DOT -> parseOtherToken();
             default -> tryParseIdentOrKeyword(getIdentOrKeywordName());
         };
     }

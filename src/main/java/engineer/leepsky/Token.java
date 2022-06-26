@@ -153,7 +153,10 @@ public abstract class Token {
             SEMICOLON,
             DOT,
             LESSER,
-            BIGGER
+            BIGGER,
+            AMPERSAND,
+            DBL_AMPERSAND,
+            AT
         }
 
         private Kind specialKind;
