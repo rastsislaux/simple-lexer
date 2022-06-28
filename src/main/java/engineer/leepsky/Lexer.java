@@ -51,10 +51,15 @@ public class Lexer {
 
     // Logic itself
 
-    public static List<Token> lex(String source, String path) {
+    public static List<Token> lex(String source, String path, boolean uniteStrings) {
         Lexer lexer = new Lexer(source, path);
         lexer.run();
+        if (uniteStrings) lexer.uniteStringLiterals();
         return lexer.tokenList;
+    }
+
+    public static List<Token> lex(String source, String path) {
+        return lex(source, path, false);
     }
 
     private Lexer(String source, String path) {
@@ -63,13 +68,29 @@ public class Lexer {
         col = 0;
         row = 1;
     }
+
+    private void uniteStringLiterals() {
+        int i = 1;
+        while (i < tokenList.size()) {
+            if (tokenList.get(i)     instanceof Token.StringLiteral &&
+                tokenList.get(i - 1) instanceof Token.StringLiteral) {
+                tokenList.set(i - 1,
+                        new Token.StringLiteral(
+                                ((Token.StringLiteral)(tokenList.get(i - 1))).getContent() +
+                                        ((Token.StringLiteral)(tokenList.get(i))).getContent(),
+                                tokenList.get(i - 1).getLoc()
+                        ));
+                tokenList.remove(i);
+                i--;
+            }
+            i++;
+        }
+    }
     
     private void run() {
         while (curIndex < source.length()) {
             Token newToken = parseChar();
-            if (newToken != null) {
-                tokenList.add(newToken);
-            }
+            if (newToken != null) { tokenList.add(newToken); }
             if (newToken instanceof Token.Unparsed) { break; }
             curIndex++;
         }

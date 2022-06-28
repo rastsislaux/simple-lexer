@@ -22,7 +22,7 @@ public class ExampleApp {
                 try {
                     tokens = Lexer.lex(
                             new String(Files.readAllBytes(Paths.get(input.substring(6)))),
-                            input.substring(6));
+                            input.substring(6), true);
                 }
                 catch (IOException e) {
                     System.out.printf("IO Exception while #load: %s%n", e.getMessage());
